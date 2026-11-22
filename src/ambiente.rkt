@@ -1,5 +1,5 @@
 #lang eopl
-;Autores: Nombre1 Codigo1, Nombre2 Codigo2
+;Autores: Josue David Cocoma Tascon 2477087, Juan Diego Montaño Vergara 2477334
 
 #|
   Taller 3 — Cauca con referencias y tipos.
@@ -21,17 +21,75 @@
 
 (require "sintaxis.rkt")
 
+;; cualquier-valor? : any -> boolean
+;; Predicado del campo de valores del ambiente: acepta cualquier valor
+;; (ver la nota de dependencias en el encabezado del módulo).
+(define cualquier-valor?
+  (lambda (v) #t))
+
+;; ambiente : TAD
+;; El ambiente de valores, con las tres variantes de EOPL:
+;;   ambiente-vacio       el ambiente sin ligaduras
+;;   ambiente-extendido   ids ligados a vals sobre el ambiente env
+;;   ambiente-recursivo   los procedimientos de un letrec: nombres,
+;;                        parámetros y cuerpos, sobre el ambiente env
+(define-datatype ambiente ambiente?
+  (ambiente-vacio)
+  (ambiente-extendido
+   (ids (list-of symbol?))
+   (vals (list-of cualquier-valor?))
+   (env ambiente?))
+  (ambiente-recursivo
+   (names (list-of symbol?))
+   (idss (list-of (list-of symbol?)))
+   (bodies (list-of expresion?))
+   (env ambiente?)))
+
+;; procval : TAD
+;; El valor procedimiento: la clausura con los parámetros, el cuerpo y el
+;; ambiente donde se creó.
+(define-datatype procval procval?
+  (closure
+   (ids (list-of symbol?))
+   (body expresion?)
+   (env ambiente?)))
+
+;; posicion-de : symbol x lista de symbol -> integer o #f
+;; La posición del símbolo en la lista, o #f si no está. Si el símbolo
+;; aparece más de una vez, la primera posición.
+(define posicion-de
+  (lambda (id ids)
+    (letrec ((buscar (lambda (lst i)
+                       (cond ((null? lst) #f)
+                             ((eqv? (car lst) id) i)
+                             (else (buscar (cdr lst) (+ i 1)))))))
+      (buscar ids 0))))
+
 ;; apply-env : ambiente x symbol -> valor
 ;; Busca la ligadura del identificador. Sobre el ambiente vacío levanta
 ;; eopl:error; sobre el recursivo construye la clausura del procedimiento.
 (define apply-env
   (lambda (env id)
-    (eopl:error 'apply-env "Sin implementar")))
+    (cases ambiente env
+      (ambiente-vacio ()
+                      (eopl:error 'apply-env "Variable no ligada: ~s" id))
+      (ambiente-extendido (ids vals saved-env)
+                          (let ((pos (posicion-de id ids)))
+                            (if pos
+                                (list-ref vals pos)
+                                (apply-env saved-env id))))
+      (ambiente-recursivo (names idss bodies saved-env)
+                          (let ((pos (posicion-de id names)))
+                            (if pos
+                                (closure (list-ref idss pos) (list-ref bodies pos) env)
+                                (apply-env saved-env id)))))))
 
 ;; ambiente-inicial : -> ambiente
 ;; El del enunciado: n = 10, m = 3, p = 7, q = 2, r = 5.
 (define ambiente-inicial
   (lambda ()
-    (eopl:error 'ambiente-inicial "Sin implementar")))
+    (ambiente-extendido '(n m p q r)
+                        '(10 3 7 2 5)
+                        (ambiente-vacio))))
 
 (provide (all-defined-out))
