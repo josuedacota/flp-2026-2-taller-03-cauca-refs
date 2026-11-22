@@ -1,5 +1,5 @@
 #lang eopl
-;Autores: Nombre1 Codigo1, Nombre2 Codigo2
+;Autores: Josue David Cocoma Tascon 2477087, Juan Diego Montaño Vergara 2477334
 
 #|
   Taller 3 — Cauca con referencias y tipos.
@@ -50,12 +50,61 @@
 (define especificacion-gramatical
   '((programa (expresion) a-program)
 
+    ;; expresiones 
     (expresion (numero) lit-exp)
+    (expresion (identificador) var-exp)
+    (expresion ("true") true-exp)
+    (expresion ("false") false-exp)
     (expresion (primitiva "(" (separated-list expresion ",") ")") prim-exp)
+    (expresion ("if" expresion "then" expresion "else" expresion "end") if-exp)
+    (expresion ("let" (arbno identificador "=" expresion) "in" expresion "end") let-exp)
+    (expresion ("proc" "(" (separated-list identificador ":" tipo ",") ")" expresion "end")
+               proc-exp)
+    (expresion ("apply" expresion "(" (separated-list expresion ",") ")") app-exp)
+    (expresion ("letrec"
+                (arbno tipo identificador
+                       "(" (separated-list identificador ":" tipo ",") ")"
+                       "=" expresion)
+                "in" expresion "end")
+               letrec-exp)
+    (expresion ("case" expresion (arbno "of" numero "=>" expresion)
+                "otherwise" "=>" expresion "end")
+               case-exp)
 
+    ;; almacén 
+    (expresion ("newref" "(" expresion ")") newref-exp)
+    (expresion ("deref" "(" expresion ")") deref-exp)
+    (expresion ("setref" "(" expresion "," expresion ")") setref-exp)
+    (expresion ("swap" "(" expresion "," expresion ")") swap-exp)
+    (expresion ("begin" expresion (arbno ";" expresion) "end") begin-exp)
+
+    ;; paso por referencia
+    (expresion ("applyref" expresion "(" (separated-list identificador ",") ")")
+               app-ref-exp)
+
+    ;; tipos
     (tipo ("num") num-tipo)
+    (tipo ("bool") bool-tipo)
+    (tipo ("refto" "(" tipo ")") ref-tipo)
+    (tipo ("(" (separated-list tipo "*") "->" tipo ")") proc-tipo)
 
-    (primitiva ("+") sum-prim)))
+    ;; primitivas 
+    (primitiva ("+") sum-prim)
+    (primitiva ("-") minus-prim)
+    (primitiva ("*") mult-prim)
+    (primitiva ("/") div-prim)
+    (primitiva ("add1") add1-prim)
+    (primitiva ("sub1") sub1-prim)
+    (primitiva ("<") less-prim)
+    (primitiva (">") greater-prim)
+    (primitiva ("<=") less-eq-prim)
+    (primitiva (">=") greater-eq-prim)
+    (primitiva ("==") equal-prim)
+    (primitiva ("!=") not-equal-prim)
+    (primitiva ("and") and-prim)
+    (primitiva ("or") or-prim)
+    (primitiva ("not") not-prim)
+    (primitiva ("entre") entre-prim)))
 
 ;;; ==========================================================
 ;;; 3. Datatypes, scanner y parser

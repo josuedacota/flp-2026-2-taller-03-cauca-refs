@@ -1,5 +1,5 @@
 #lang eopl
-;Autores: Nombre1 Codigo1, Nombre2 Codigo2
+;Autores: Josue David Cocoma Tascon 2477087, Juan Diego Montaño Vergara 2477334
 
 #|
   Taller 3 — Cauca con referencias y tipos.
@@ -25,34 +25,68 @@
     4. deref sobre una referencia fuera de rango levanta eopl:error
 |#
 
+;; referencia : TAD
+;; a-ref guarda la posición de la celda dentro del almacén.
+(define-datatype referencia referencia?
+  (a-ref (pos integer?)))
+
+;; the-store : almacen
+;; El almacén global: la lista de celdas, indexadas desde 0.
+(define the-store '())
+
 ;; empty-store : -> almacen
 ;; El almacén sin celdas.
 (define empty-store
   (lambda ()
-    (eopl:error 'empty-store "Sin implementar")))
+    '()))
 
 ;; initialize-store! : -> void
 ;; Deja el almacén vacío. Se llama al empezar cada programa.
 (define initialize-store!
   (lambda ()
-    (eopl:error 'initialize-store! "Sin implementar")))
+    (set! the-store (empty-store))))
+
+;; posicion-valida? : integer -> boolean
+;; Dice si la posición nombra una celda existente del almacén actual.
+(define posicion-valida?
+  (lambda (pos)
+    (and (>= pos 0) (< pos (length the-store)))))
 
 ;; newref! : valor -> referencia
 ;; Agrega una celda con el valor y retorna la referencia que la nombra.
 (define newref!
   (lambda (val)
-    (eopl:error 'newref! "Sin implementar")))
+    (let ((pos (length the-store)))
+      (set! the-store (append the-store (list val)))
+      (a-ref pos))))
 
 ;; deref : referencia -> valor
 ;; Lee la celda. Si la referencia está fuera de rango, levanta eopl:error.
 (define deref
   (lambda (ref)
-    (eopl:error 'deref "Sin implementar")))
+    (cases referencia ref
+      (a-ref (pos)
+             (if (posicion-valida? pos)
+                 (list-ref the-store pos)
+                 (eopl:error 'deref "Referencia fuera de rango: ~s" pos))))))
+
+;; reemplazar-en : lista x integer x valor -> lista
+;; Copia de la lista con el elemento de la posición cambiado por el valor.
+;; No toca ninguna otra posición.
+(define reemplazar-en
+  (lambda (lst pos val)
+    (if (= pos 0)
+        (cons val (cdr lst))
+        (cons (car lst) (reemplazar-en (cdr lst) (- pos 1) val)))))
 
 ;; setref! : referencia x valor -> void
 ;; Escribe el valor en la celda y deja las demás intactas.
 (define setref!
   (lambda (ref val)
-    (eopl:error 'setref! "Sin implementar")))
+    (cases referencia ref
+      (a-ref (pos)
+             (if (posicion-valida? pos)
+                 (set! the-store (reemplazar-en the-store pos val))
+                 (eopl:error 'setref! "Referencia fuera de rango: ~s" pos))))))
 
 (provide (all-defined-out))
