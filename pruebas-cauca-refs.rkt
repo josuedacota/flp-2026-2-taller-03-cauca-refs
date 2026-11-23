@@ -1,5 +1,5 @@
 #lang eopl
-;Autores: Nombre1 Codigo1, Nombre2 Codigo2
+;Autores: Josue David Cocoma Tascon 2477087, Juan Diego Montaño Vergara 2477334
 
 #|
   Pruebas del interpretador con referencias y del chequeador de tipos.
