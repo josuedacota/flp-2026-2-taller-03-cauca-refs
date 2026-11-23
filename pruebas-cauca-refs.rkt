@@ -228,3 +228,85 @@ end") "num"))
 (eopl:printf "~%==========================================~%")
 (eopl:printf "  pruebas fallidas en total: ~s~%" fallidas)
 (eopl:printf "==========================================~%")
+
+;;; ==========================================================
+;;; Pruebas del grupo
+;;; ==========================================================
+
+(define almacen-grupo
+  (test-suite
+   "Grupo: almacen, alias y errores"
+   (test-case "swap de una referencia consigo misma no cambia la celda"
+              (check-equal? (corre "let a = newref(7) in begin swap(a, a); deref(a) end end") 7))
+   (test-case "swap retorna el contenido anterior de la segunda celda"
+              (check-equal? (corre "let a = newref(1) b = newref(9) in swap(a, b) end") 9))
+   (test-case "setref sobre un alias se ve desde el otro nombre"
+              (check-equal? (corre "let a = newref(1) in let b = a in begin setref(b, 5); setref(a, +(deref(a), 1)); deref(b) end end end") 6))
+   (test-case "dos newref crean celdas distintas"
+              (check-equal? (corre "let a = newref(1) b = newref(1) in begin setref(a, 2); deref(b) end end") 1))
+   (test-case "una celda puede guardar otra referencia"
+              (check-equal? (corre "deref(deref(newref(newref(8))))") 8))
+   (test-case "errores de tipo en el almacen"
+              (check-exn exn:fail? (lambda () (corre "deref(true)")))
+              (check-exn exn:fail? (lambda () (corre "setref(true, 1)")))
+              (check-exn exn:fail? (lambda () (corre "swap(newref(1), 3)"))))
+   (test-case "deref sobre una referencia fuera de rango levanta error"
+              (check-exn exn:fail? (lambda () (deref (a-ref 99))))
+              (check-exn exn:fail? (lambda () (setref! (a-ref 99) 1))))
+   (test-case "el almacen solo crece por newref"
+              (initialize-store!)
+              (let ((r (newref! 1)))
+                (setref! r 2)
+                (deref r)
+                (check-equal? (length the-store) 1)
+                (newref! 3)
+                (check-equal? (length the-store) 2)))))
+
+(define referencias-grupo
+  (test-suite
+   "Grupo: paso por referencia"
+   (test-case "aridad incorrecta en applyref"
+              (check-exn exn:fail?
+                         (lambda () (corre "let a = newref(1) in let f = proc (u : refto(num), v : refto(num)) deref(u) end in applyref f (a) end end"))))
+   (test-case "la copia por valor de una referencia es una celda nueva"
+              (check-equal? (corre "let a = newref(1) in let f = proc (u : refto(num)) begin setref(u, 7); deref(u) end end in begin apply f (a); deref(a) end end end") 1))
+   (test-case "applyref con el mismo identificador dos veces"
+              (check-equal? (corre "let a = newref(3) in let f = proc (u : refto(num), v : refto(num)) begin setref(u, 10); deref(v) end end in applyref f (a, a) end end") 10))))
+
+(define chequeador-grupo
+  (test-suite
+   "Grupo: chequeador"
+   (test-case "begin toma el tipo de la ultima expresion"
+              (check-equal? (tipo-de "begin 1; true end") "bool"))
+   (test-case "letrec con dos procedimientos"
+              (check-equal? (tipo-de "letrec bool par (k : num) = if ==(k, 0) then true else apply impar (sub1(k)) end
+       bool impar (k : num) = if ==(k, 0) then false else apply par (sub1(k)) end
+in apply par (4) end") "bool"))
+   (test-case "tipo de procedimiento sin argumentos"
+              (check-equal? (tipo-de "proc () 1 end") "(-> num)"))
+   (test-case "setref retorna num"
+              (check-equal? (tipo-de "setref(newref(true), false)") "num"))
+   (test-case "applyref con una variable que no es referencia"
+              (check-true (contiene? (mensaje-de "let z = 1 in let f = proc (u : refto(num)) deref(u) end in applyref f (z) end end")
+                                     "applyref exige variables de tipo refto(t)")))
+   (test-case "swap con celdas de distinto tipo"
+              (check-true (contiene? (mensaje-de "swap(newref(1), newref(true))")
+                                     "swap exige celdas del mismo tipo")))
+   (test-case "argumento de tipo equivocado en applyref"
+              (check-true (contiene? (mensaje-de "let a = newref(true) in let f = proc (u : refto(num)) deref(u) end in applyref f (a) end end")
+                                     "El argumento 1 debe ser refto(num), se encontro refto(bool)")))
+   (test-case "case con ramas de distinto tipo"
+              (check-true (contiene? (mensaje-de "case n of 1 => 10 otherwise => true end")
+                                     "Las ramas del case deben coincidir")))
+   (test-case "primitiva con argumento de tipo equivocado"
+              (check-true (contiene? (mensaje-de "+(1, true)")
+                                     "El argumento 2 debe ser num, se encontro bool")))))
+
+(define fallidas-grupo
+  (+ (run-tests almacen-grupo)
+     (run-tests referencias-grupo)
+     (run-tests chequeador-grupo)))
+
+(eopl:printf "~%==========================================~%")
+(eopl:printf "  pruebas fallidas del grupo: ~s~%" fallidas-grupo)
+(eopl:printf "==========================================~%")
